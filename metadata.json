@@ -1,0 +1,9 @@
+{
+  "name": "VisitTrack Pro",
+  "description": "Geo-located client visit tracking with photo uploads and AI analysis.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
