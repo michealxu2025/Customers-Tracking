@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { VisitRecord } from '../types';
 import { uploadImageToImgBB } from '../services/dataService';
-import { analyzeVisitNotes } from '../services/geminiService';
 
 interface VisitFormProps {
   initialData?: VisitRecord | null;
@@ -56,7 +55,6 @@ const VisitForm: React.FC<VisitFormProps> = ({ initialData, existingVisits, onSa
   const isNewClient = !isEditing && !initialData?.clientName;
 
   const [uploading, setUploading] = useState(false);
-  const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Extract unique client names for auto-complete suggestions
@@ -141,14 +139,6 @@ const VisitForm: React.FC<VisitFormProps> = ({ initialData, existingVisits, onSa
     } finally {
       setUploading(false);
     }
-  };
-
-  const handleAIAnalysis = async () => {
-    if (!formData.visitNotes) return;
-    setAnalyzing(true);
-    const analysis = await analyzeVisitNotes(formData.visitNotes, formData.clientName);
-    setFormData(prev => ({ ...prev, aiAnalysis: analysis }));
-    setAnalyzing(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -272,28 +262,7 @@ const VisitForm: React.FC<VisitFormProps> = ({ initialData, existingVisits, onSa
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="记录会议详情、客户反馈等..."
               />
-              <button
-                type="button"
-                onClick={handleAIAnalysis}
-                disabled={!formData.visitNotes || analyzing}
-                className="absolute bottom-2 right-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-xs px-3 py-1.5 rounded-full hover:opacity-90 disabled:opacity-50 flex items-center shadow-sm"
-              >
-                {analyzing ? (
-                  <span>分析中...</span>
-                ) : (
-                  <>
-                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                    AI 分析
-                  </>
-                )}
-              </button>
             </div>
-            {formData.aiAnalysis && (
-              <div className="mt-2 p-3 bg-indigo-50 border border-indigo-100 rounded-lg text-sm text-indigo-900">
-                <strong className="block text-indigo-700 mb-1">AI 洞察:</strong>
-                {formData.aiAnalysis}
-              </div>
-            )}
           </div>
         )}
 

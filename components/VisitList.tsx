@@ -98,7 +98,7 @@ const VisitList: React.FC<VisitListProps> = ({ visits, onSelectVisit, onCreateVi
   const timeRangeData = useMemo(() => {
     if (groupBy !== 'time') return null;
 
-    const allClients = Array.from(new Set(visits.map(v => v.clientName).filter(n => n && n.trim() !== '')));
+    const allClients: string[] = Array.from(new Set(visits.map(v => v.clientName).filter(n => n && n.trim() !== '')));
     
     const startTs = new Date(startDate).setHours(0,0,0,0);
     const endTs = new Date(endDate).setHours(23,59,59,999);
@@ -191,9 +191,6 @@ const VisitList: React.FC<VisitListProps> = ({ visits, onSelectVisit, onCreateVi
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-2">
                 <span className="text-sm font-bold text-indigo-900">{formatToChineseDate(visit.visitDate)}</span>
-                {visit.aiAnalysis && (
-                   <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded border border-purple-200">AI分析</span>
-                )}
               </div>
               <p className="text-sm text-slate-600 mt-2 line-clamp-2">{visit.visitNotes}</p>
             </div>

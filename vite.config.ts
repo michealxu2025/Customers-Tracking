@@ -3,13 +3,20 @@ import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  // Use type assertion for process to fix "Property 'cwd' does not exist on type 'Process'"
   const env = loadEnv(mode, (process as any).cwd(), '');
   return {
+    // 关键修改: 使用相对路径，确保在 Netlify/Cloudflare/Nginx 子目录下也能正常运行
+    base: './', 
     plugins: [react()],
     define: {
-      // 兼容您代码中使用的 process.env.API_KEY
-      'process.env.API_KEY': JSON.stringify(env.API_KEY)
+      'process.env.API_KEY': JSON.stringify(env.API_KEY),
+      'process.env.GAS_URL': JSON.stringify(env.GAS_URL),
+      'process.env.IMGBB_KEY': JSON.stringify(env.IMGBB_KEY)
+    },
+    build: {
+      outDir: 'dist',
+      assetsDir: 'assets',
+      sourcemap: false
     }
   }
 })

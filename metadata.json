@@ -1,5 +1,5 @@
 {
-  "name": "VisitTrack Pro",
+  "name": "客户拜访记录",
   "description": "Geo-located client visit tracking with photo uploads and AI analysis.",
   "requestFramePermissions": [
     "camera",

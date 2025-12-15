@@ -6,9 +6,9 @@ import VisitForm from './components/VisitForm';
 import Settings from './components/Settings';
 import { getVisits, saveVisit, deleteVisit } from './services/dataService';
 
-// 更新为用户提供的有效后端地址和 API Key
+// ⚠️ 默认配置 (已根据需求硬编码)
 const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbzztRE3a1eC-XCombzh6y-4oXNFANC2iqO4nsQZDJ9Zs2l8p1n3Xk4BxGb_uxFnnHCp/exec";
-const DEFAULT_IMGBB_KEY = "5bf590ec9504f440b6606fe6daeadea4";
+const DEFAULT_IMGBB_KEY = "005410c0aa046abd33de8e6bc93f6376";
 
 const App: React.FC = () => {
   const [view, setView] = useState<ViewMode>('list');
@@ -32,7 +32,9 @@ const App: React.FC = () => {
       }
     }
     
-    // Use provided defaults if not present in local storage, or if local storage is empty
+    // 逻辑：
+    // 1. 如果本地缓存(localStorage)有值，优先使用（允许用户临时覆盖）
+    // 2. 否则使用默认硬编码值
     return {
       gasWebAppUrl: parsed.gasWebAppUrl || DEFAULT_GAS_URL,
       imgbbApiKey: parsed.imgbbApiKey || DEFAULT_IMGBB_KEY
@@ -59,8 +61,14 @@ const App: React.FC = () => {
       setVisits(data);
     } catch (error: any) {
       console.error("Failed to load data", error);
+      
+      let errorMsg = error.message;
+      if (errorMsg.includes("Rate exceeded") || errorMsg.includes("429")) {
+        errorMsg = "Google API 配额超限 (Rate exceeded)。这通常是因为使用了默认的共享 URL。请在设置中配置您自己部署的 Google Apps Script URL。";
+      }
+      
       // Use state instead of alert
-      setConnectionError(error.message);
+      setConnectionError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -75,9 +83,11 @@ const App: React.FC = () => {
       setView('list');
       setSelectedVisit(null);
     } catch (error: any) {
-      // For save operations, alert is still appropriate as it's a direct user action response,
-      // but we can also use the error banner if preferred.
-      alert(`保存记录失败: ${error.message}`);
+      let errorMsg = error.message;
+      if (errorMsg.includes("Rate exceeded")) {
+         errorMsg = "API 调用配额超限。请检查您的 Google Apps Script 部署或稍后再试。";
+      }
+      alert(`保存记录失败: ${errorMsg}`);
     } finally {
       setLoading(false);
     }
