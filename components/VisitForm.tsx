@@ -56,6 +56,7 @@ const VisitForm: React.FC<VisitFormProps> = ({ initialData, existingVisits, onSa
 
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // Extract unique client names for auto-complete suggestions
   const uniqueClients = Array.from(new Set(existingVisits.map(v => v.clientName).filter(Boolean))).sort();
@@ -273,11 +274,16 @@ const VisitForm: React.FC<VisitFormProps> = ({ initialData, existingVisits, onSa
             <div className="flex flex-wrap gap-4 mb-2">
               {formData.photos.map((url, idx) => (
                 <div key={idx} className="relative w-24 h-24 rounded-lg overflow-hidden shadow-sm border border-slate-200 group">
-                  <img src={url} alt="Visit" className="w-full h-full object-cover" />
+                  <img 
+                    src={url} 
+                    alt="Visit" 
+                    className="w-full h-full object-cover cursor-zoom-in hover:opacity-90 transition-opacity" 
+                    onClick={() => setPreviewImage(url)}
+                  />
                   <button
                     type="button"
                     onClick={() => setFormData(prev => ({ ...prev, photos: prev.photos.filter((_, i) => i !== idx) }))}
-                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-600"
                   >
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
@@ -297,7 +303,7 @@ const VisitForm: React.FC<VisitFormProps> = ({ initialData, existingVisits, onSa
                 </label>
               )}
             </div>
-            <p className="text-xs text-slate-500">照片将上传至 ImgBB 并存储链接。</p>
+            <p className="text-xs text-slate-500">点击照片可查看原图。照片将上传至 ImgBB 并存储链接。</p>
           </div>
         )}
 
@@ -317,6 +323,27 @@ const VisitForm: React.FC<VisitFormProps> = ({ initialData, existingVisits, onSa
           </button>
         </div>
       </form>
+
+      {/* Full Screen Image Preview Modal */}
+      {previewImage && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300"
+          onClick={() => setPreviewImage(null)}
+        >
+          <button 
+            className="absolute top-4 right-4 p-2 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors z-[110]"
+            onClick={() => setPreviewImage(null)}
+          >
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+          <img 
+            src={previewImage} 
+            alt="Original" 
+            className="max-w-full max-h-full object-contain rounded-md shadow-2xl"
+            onClick={(e) => e.stopPropagation()} 
+          />
+        </div>
+      )}
     </div>
   );
 };

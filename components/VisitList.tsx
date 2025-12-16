@@ -12,6 +12,7 @@ interface VisitListProps {
 const VisitList: React.FC<VisitListProps> = ({ visits, onSelectVisit, onCreateVisitForClient, onCreateNewClient, onDeleteVisit }) => {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [groupBy, setGroupBy] = useState<'region' | 'time'>('region');
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   
   // Date Range State (Defaults: First day of current month to Today)
   const [startDate, setStartDate] = useState(() => {
@@ -197,7 +198,15 @@ const VisitList: React.FC<VisitListProps> = ({ visits, onSelectVisit, onCreateVi
             
             {visit.photos.length > 0 && (
               <div className="ml-3 flex-shrink-0 hidden xs:block">
-                 <img src={visit.photos[0]} alt="Thumbnail" className="w-16 h-16 rounded-md object-cover border border-slate-200" />
+                 <img 
+                   src={visit.photos[0]} 
+                   alt="Thumbnail" 
+                   className="w-16 h-16 rounded-md object-cover border border-slate-200 cursor-zoom-in hover:opacity-80 transition-opacity" 
+                   onClick={(e) => {
+                     e.stopPropagation();
+                     setPreviewImage(visit.photos[0]);
+                   }}
+                 />
               </div>
             )}
              <div className="ml-2 flex items-center space-x-1 self-center">
@@ -214,6 +223,27 @@ const VisitList: React.FC<VisitListProps> = ({ visits, onSelectVisit, onCreateVi
             </div>
           </div>
         ))}
+        
+        {/* Full Screen Image Preview Modal for List View */}
+        {previewImage && (
+          <div 
+            className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300"
+            onClick={() => setPreviewImage(null)}
+          >
+            <button 
+              className="absolute top-4 right-4 p-2 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors z-[110]"
+              onClick={() => setPreviewImage(null)}
+            >
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <img 
+              src={previewImage} 
+              alt="Original" 
+              className="max-w-full max-h-full object-contain rounded-md shadow-2xl"
+              onClick={(e) => e.stopPropagation()} 
+            />
+          </div>
+        )}
       </div>
     );
   }
