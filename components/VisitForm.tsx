@@ -115,8 +115,8 @@ const VisitForm: React.FC<VisitFormProps> = ({ initialData, existingVisits, onSa
     setError(null);
     const files = Array.from(e.target.files) as File[];
     
-    // Limit to remaining slots (max 5)
-    const remainingSlots = 5 - formData.photos.length;
+    // Limit to remaining slots (max 10)
+    const remainingSlots = 10 - formData.photos.length;
     const filesToUpload = files.slice(0, remainingSlots);
 
     try {
@@ -270,7 +270,7 @@ const VisitForm: React.FC<VisitFormProps> = ({ initialData, existingVisits, onSa
         {/* 仅在非新建客户模式下显示照片 */}
         {!isNewClient && (
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">拜访照片 (最多5张)</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">拜访照片 (最多10张)</label>
             <div className="flex flex-wrap gap-4 mb-2">
               {formData.photos.map((url, idx) => (
                 <div key={idx} className="relative w-24 h-24 rounded-lg overflow-hidden shadow-sm border border-slate-200 group">
@@ -289,7 +289,7 @@ const VisitForm: React.FC<VisitFormProps> = ({ initialData, existingVisits, onSa
                   </button>
                 </div>
               ))}
-              {formData.photos.length < 5 && (
+              {formData.photos.length < 10 && (
                 <label className={`w-24 h-24 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-indigo-500 hover:bg-indigo-50 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
                   <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" disabled={uploading} multiple />
                   {uploading ? (

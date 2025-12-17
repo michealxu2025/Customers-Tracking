@@ -8,155 +8,104 @@ const GAS_SCRIPT_CODE = `
 // 1. 将此代码粘贴到 Google Apps Script 编辑器 (Code.gs)
 // 2. 点击 "部署" (Deploy) > "新建部署" (New deployment)
 // 3. 选择类型: "Web 应用" (Web app)
-// 4. 描述: V5 - Final with Delete & Lock
-// 5. 以我身份运行 (Execute as): Me (我)
-// 6. 谁可以访问 (Who has access): Anyone (任何人) -> 必选！
-// 7. 点击 "部署", 复制生成的 "Web App URL"
+// 4. 以我身份运行 (Execute as): Me (我)
+// 5. 谁可以访问 (Who has access): Anyone (任何人) -> 必选！
 // -----------------------------------------------------
 
 // ✅ 配置: 您的 Google Sheet ID
-// 请确保此 ID 与您实际使用的表格 ID 一致
 const SPREADSHEET_ID = "1N_xfjmI2sv2wFmlDoQ6I4SMEnH493vkmgjSTWd1uxdI";
 
-// ✅ 表头定义:
-// 1:地区, 2:google定位, 3:客户名, 4:拜访日期, 5:拜访记录
-// 6-10: 拜访照片1-5
-// 11:ID, 12:Lat, 13:Lng, 14:AI_Analysis
+// ✅ 表头定义 (V6 - 10 Photos):
+// 0:地区, 1:google定位, 2:客户名, 3:拜访日期, 4:拜访记录
+// 5-14: 拜访照片1-10
+// 15:ID, 16:Lat, 17:Lng, 18:AI_Analysis
 
 function doGet(e) {
-  const lock = LockService.getScriptLock();
-  // 读操作通常不需要锁，但为了保持一致性可保留，或者为了性能可去掉
-  // 这里我们只处理 action路由
-  
   if (!e || !e.parameter) {
-    return ContentService.createTextOutput("Service is active. Please use the App.");
+    return ContentService.createTextOutput("Service is active.");
   }
-
   const action = e.parameter.action;
-  
-  if (action === 'read') {
-    return readVisits();
-  }
-
+  if (action === 'read') return readVisits();
   return createJSONOutput({status: 'error', message: 'Unknown action'});
 }
 
 function doPost(e) {
-  // 🔒 获取脚本锁，防止并发写入导致数据错乱 (等待最多 10秒)
   const lock = LockService.getScriptLock();
   try {
     lock.waitLock(10000); 
   } catch (e) {
-    return createJSONOutput({status: 'error', message: 'Server is busy, please try again.'});
+    return createJSONOutput({status: 'error', message: 'Server is busy'});
   }
 
   try {
-    if (!e || !e.postData) {
-      return createJSONOutput({status: 'error', message: 'Invalid POST'});
-    }
-
     const ss = getSpreadsheet();
-    if (!ss) return createJSONOutput({status: 'error', message: 'Spreadsheet not found'});
-
     const sheetName = "Visits";
     let sheet = ss.getSheetByName(sheetName);
     
-    // 初始化 Sheet
     if (!sheet) {
       sheet = ss.insertSheet(sheetName);
       sheet.appendRow([
         "地区", "google定位", "客户名", "拜访日期", "拜访记录", 
-        "拜访照片1", "拜访照片2", "拜访照片3", "拜访照片4", "拜访照片5",
+        "照片1", "照片2", "照片3", "照片4", "照片5", "照片6", "照片7", "照片8", "照片9", "照片10",
         "ID", "Lat", "Lng", "AI_Analysis"
       ]);
     }
 
-    const jsonString = e.postData.contents;
-    const payload = JSON.parse(jsonString);
+    const payload = JSON.parse(e.postData.contents);
     
-    // ===========================
-    // 🗑️ 删除逻辑 (DELETE)
-    // ===========================
+    // DELETE
     if (payload.action === 'delete') {
       const idToDelete = payload.id;
-      if (!idToDelete) return createJSONOutput({status: 'error', message: 'Missing ID'});
-      
       const data = sheet.getDataRange().getValues();
-      // 遍历查找 ID (K列, 索引10)
       for (let i = 1; i < data.length; i++) {
-        // 强制转为 String 比较，防止数字/字符串类型不匹配
-        if (String(data[i][10]) === String(idToDelete)) {
-          // deleteRow 使用 1-based index
+        if (String(data[i][15]) === String(idToDelete)) {
           sheet.deleteRow(i + 1);
-          return createJSONOutput({status: 'success', message: 'Deleted'});
+          return createJSONOutput({status: 'success'});
         }
       }
       return createJSONOutput({status: 'error', message: 'ID not found'});
     }
 
-    // ===========================
-    // 📝 写入逻辑 (WRITE)
-    // ===========================
+    // WRITE
     const item = payload.data; 
-    if (!item) return createJSONOutput({status: 'error', message: 'No data'});
-
-    // 处理照片 (固定5列)
-    const photoCols = ["", "", "", "", ""];
+    const photoCols = Array(10).fill("");
     if (item.photos && Array.isArray(item.photos)) {
-      for (let i = 0; i < Math.min(item.photos.length, 5); i++) {
+      for (let i = 0; i < Math.min(item.photos.length, 10); i++) {
         photoCols[i] = item.photos[i];
       }
     }
 
-    // 格式化日期
     const cleanDate = item.visitDate ? String(item.visitDate).split('T')[0] : '';
-
     const rowData = [
-      item.region,
-      item.locationLink,
-      item.clientName,
-      cleanDate,
-      item.visitNotes,
-      photoCols[0], photoCols[1], photoCols[2], photoCols[3], photoCols[4],
-      item.id,
-      item.latitude,
-      item.longitude,
-      item.aiAnalysis
+      item.region, item.locationLink, item.clientName, cleanDate, item.visitNotes,
+      ...photoCols,
+      item.id, item.latitude, item.longitude, item.aiAnalysis
     ];
 
     const data = sheet.getDataRange().getValues();
     let rowIndex = -1;
-    
-    // 查找是否存在现有 ID
     for (let i = 1; i < data.length; i++) {
-      if (String(data[i][10]) === String(item.id)) {
+      if (String(data[i][15]) === String(item.id)) {
         rowIndex = i + 1;
         break;
       }
     }
 
     if (rowIndex > 0) {
-      // 更新
       sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
     } else {
-      // 新增
       sheet.appendRow(rowData);
     }
-    
     return createJSONOutput({status: 'success'});
-    
   } catch (error) {
     return createJSONOutput({status: 'error', message: error.toString()});
   } finally {
-    // 🔓 释放锁
     lock.releaseLock();
   }
 }
 
 function readVisits() {
   const ss = getSpreadsheet();
-  if (!ss) return createJSONOutput({status: 'success', data: []});
-
   const sheet = ss.getSheetByName("Visits");
   if (!sheet) return createJSONOutput({status: 'success', data: []});
 
@@ -164,16 +113,11 @@ function readVisits() {
   if (data.length <= 1) return createJSONOutput({status: 'success', data: []});
 
   const rows = data.slice(1);
-  // 按日期倒序排列 (最新的在前)，辅助前端排序
-  // rows.sort((a, b) => new Date(b[3]) - new Date(a[3])); 
-  // (可选：通常前端处理排序更好，这里保持原始顺序或按插入顺序)
-
   const visits = rows.map(row => {
     const photos = [];
-    for (let i = 5; i <= 9; i++) {
+    for (let i = 5; i <= 14; i++) {
       if (row[i] && String(row[i]).trim() !== "") photos.push(row[i]);
     }
-
     return {
       region: row[0],
       locationLink: row[1],
@@ -181,38 +125,27 @@ function readVisits() {
       visitDate: formatDate(row[3]),
       visitNotes: row[4],
       photos: photos,
-      id: row[10] ? String(row[10]) : '', 
-      latitude: Number(row[11]) || 0,
-      longitude: Number(row[12]) || 0,
-      aiAnalysis: row[13] || ''
+      id: row[15] ? String(row[15]) : '', 
+      latitude: Number(row[16]) || 0,
+      longitude: Number(row[17]) || 0,
+      aiAnalysis: row[18] || ''
     };
   });
-
   return createJSONOutput({status: 'success', data: visits});
 }
 
 function getSpreadsheet() {
-  if (SPREADSHEET_ID && SPREADSHEET_ID.length > 10) {
-    try {
-      return SpreadsheetApp.openById(SPREADSHEET_ID);
-    } catch (e) {
-      console.log("Error opening by ID, falling back to Active.");
-      return SpreadsheetApp.getActiveSpreadsheet();
-    }
-  }
-  return SpreadsheetApp.getActiveSpreadsheet();
+  try { return SpreadsheetApp.openById(SPREADSHEET_ID); } 
+  catch (e) { return SpreadsheetApp.getActiveSpreadsheet(); }
 }
 
 function createJSONOutput(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
 function formatDate(date) {
   if (!date) return '';
-  if (date instanceof Date) {
-    return Utilities.formatDate(date, Session.getScriptTimeZone(), "yyyy-MM-dd");
-  }
+  if (date instanceof Date) return Utilities.formatDate(date, Session.getScriptTimeZone(), "yyyy-MM-dd");
   return String(date).split('T')[0];
 }
 `;
@@ -258,9 +191,9 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSave, onClose }) => {
 
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                 <h4 className="text-sm font-bold text-slate-700 mb-2">Google Apps Script 后端代码 (Code.gs)</h4>
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 mb-2">
-                  <p className="text-xs text-yellow-800">
-                    <strong>⚠️ 需要更新:</strong> 代码已更新以支持“删除功能”和“并发安全锁”。请复制下方新代码并在 Google Apps Script 编辑器中重新部署 (选择 "New deployment")。
+                <div className="bg-blue-50 border-l-4 border-blue-400 p-2 mb-2">
+                  <p className="text-xs text-blue-800">
+                    <strong>ℹ️ 信息:</strong> 已升级至 10 张照片支持。请复制下方代码覆盖旧脚本并<strong>重新部署</strong>。
                   </p>
                 </div>
                 <pre className="bg-slate-800 text-slate-100 p-3 rounded text-xs overflow-x-auto h-64 font-mono leading-relaxed selection:bg-indigo-500 selection:text-white">
@@ -285,7 +218,7 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSave, onClose }) => {
             <h3 className="text-lg font-semibold text-indigo-700 mb-3">2. API 集成</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-slate-700">ImgBB API Key (用于图片存储)</label>
+                <label className="block text-sm font-medium text-slate-700">ImgBB API Key</label>
                 <input
                   type="password"
                   name="imgbbApiKey"
@@ -293,7 +226,6 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSave, onClose }) => {
                   onChange={handleChange}
                   className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
-                <a href="https://api.imgbb.com/" target="_blank" rel="noreferrer" className="text-xs text-indigo-500 hover:underline">在此获取 Key</a>
               </div>
             </div>
           </section>
